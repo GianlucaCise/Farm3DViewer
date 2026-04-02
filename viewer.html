@@ -1,0 +1,955 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MC Farm Viewer</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=VT323&family=IBM+Plex+Mono:wght@400;500&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0e0e0e;
+    --surface: #161616;
+    --surface2: #1e1e1e;
+    --border: #2a2a2a;
+    --border2: #3a3a3a;
+    --text: #e8e8e0;
+    --text2: #888880;
+    --text3: #555550;
+    --accent: #7ab648;
+    --accent2: #5a8832;
+    --red: #c0392b;
+    --gold: #d4a017;
+    --sky: #1a8fb5;
+  }
+
+  html, body {
+    height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    overflow: hidden;
+  }
+
+  /* ── LAYOUT ── */
+  #app {
+    display: grid;
+    grid-template-rows: 48px 1fr;
+    grid-template-columns: 1fr 280px;
+    height: 100vh;
+  }
+
+  /* ── HEADER ── */
+  #header {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 0 20px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+  }
+  #header h1 {
+    font-family: 'VT323', monospace;
+    font-size: 22px;
+    color: var(--accent);
+    letter-spacing: 1px;
+  }
+  #farm-meta {
+    display: flex;
+    gap: 10px;
+    margin-left: auto;
+  }
+  .badge {
+    font-size: 10px;
+    padding: 2px 8px;
+    border: 1px solid var(--border2);
+    border-radius: 2px;
+    color: var(--text2);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .badge.green { border-color: var(--accent2); color: var(--accent); }
+
+  /* ── CANVAS AREA ── */
+  #canvas-wrap {
+    position: relative;
+    background: #111;
+    overflow: hidden;
+  }
+  #three-canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  /* ── CONTROLS OVERLAY ── */
+  #controls-bar {
+    position: absolute;
+    bottom: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: rgba(14,14,14,0.92);
+    border: 1px solid var(--border2);
+    border-radius: 4px;
+    padding: 8px 14px;
+    backdrop-filter: blur(4px);
+  }
+  #controls-bar label {
+    color: var(--text2);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  #layer-slider {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 140px;
+    height: 4px;
+    background: var(--border2);
+    border-radius: 2px;
+    outline: none;
+  }
+  #layer-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px; height: 14px;
+    background: var(--accent);
+    border-radius: 2px;
+    cursor: pointer;
+  }
+  #layer-label {
+    font-size: 12px;
+    color: var(--accent);
+    min-width: 60px;
+    text-align: center;
+  }
+
+  .ctrl-btn {
+    background: none;
+    border: 1px solid var(--border2);
+    color: var(--text2);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    padding: 4px 10px;
+    cursor: pointer;
+    border-radius: 2px;
+    transition: border-color 0.15s, color 0.15s;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .ctrl-btn:hover, .ctrl-btn.active {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .ctrl-btn.active { background: rgba(122,182,72,0.08); }
+
+  /* ── SIDEBAR ── */
+  #sidebar {
+    border-left: 1px solid var(--border);
+    background: var(--surface);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* Tabs */
+  #tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border);
+  }
+  .tab {
+    flex: 1;
+    padding: 10px 0;
+    text-align: center;
+    cursor: pointer;
+    font-size: 11px;
+    color: var(--text2);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    border-bottom: 2px solid transparent;
+    transition: color 0.15s, border-color 0.15s;
+  }
+  .tab.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+  }
+
+  /* Pannelli */
+  .panel { display: none; flex-direction: column; overflow: hidden; flex: 1; }
+  .panel.active { display: flex; }
+
+  /* ── PANEL: MATERIALI ── */
+  #mat-header {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  #progress-text { font-size: 11px; color: var(--text2); }
+  #progress-bar-wrap {
+    height: 3px;
+    background: var(--border);
+    flex: 1;
+    margin-left: 10px;
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  #progress-bar {
+    height: 100%;
+    background: var(--accent);
+    width: 0%;
+    transition: width 0.3s;
+    border-radius: 2px;
+  }
+  #mat-list {
+    overflow-y: auto;
+    flex: 1;
+    padding: 4px 0;
+  }
+  #mat-list::-webkit-scrollbar { width: 4px; }
+  #mat-list::-webkit-scrollbar-track { background: var(--surface); }
+  #mat-list::-webkit-scrollbar-thumb { background: var(--border2); }
+
+  .mat-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 7px 14px;
+    cursor: pointer;
+    transition: background 0.1s;
+    border-bottom: 1px solid var(--border);
+  }
+  .mat-item:hover { background: var(--surface2); }
+  .mat-item.checked { opacity: 0.45; }
+
+  .mat-icon {
+    width: 28px;
+    height: 28px;
+    image-rendering: pixelated;
+    flex-shrink: 0;
+    border: 1px solid var(--border2);
+    background: #1a1a1a;
+  }
+  .mat-name { flex: 1; color: var(--text); line-height: 1.3; }
+  .mat-name small { display: block; color: var(--text3); font-size: 10px; }
+  .mat-qty {
+    font-size: 12px;
+    color: var(--gold);
+    text-align: right;
+    flex-shrink: 0;
+  }
+  .mat-check {
+    width: 16px; height: 16px;
+    border: 1px solid var(--border2);
+    border-radius: 2px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    transition: background 0.1s, border-color 0.1s;
+  }
+  .mat-item.checked .mat-check {
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+  .mat-check::after {
+    content: '';
+    width: 8px; height: 5px;
+    border-left: 2px solid #fff;
+    border-bottom: 2px solid #fff;
+    transform: rotate(-45deg) translateY(-1px);
+    display: none;
+  }
+  .mat-item.checked .mat-check::after { display: block; }
+
+  #mat-reset {
+    margin: 10px 14px;
+    padding: 7px;
+    border: 1px solid var(--border2);
+    background: none;
+    color: var(--text3);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    cursor: pointer;
+    border-radius: 2px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    transition: color 0.15s, border-color 0.15s;
+  }
+  #mat-reset:hover { color: var(--red); border-color: var(--red); }
+
+  /* ── PANEL: STEPS ── */
+  #steps-list {
+    overflow-y: auto;
+    flex: 1;
+    padding: 8px 0;
+  }
+  #steps-list::-webkit-scrollbar { width: 4px; }
+  #steps-list::-webkit-scrollbar-track { background: var(--surface); }
+  #steps-list::-webkit-scrollbar-thumb { background: var(--border2); }
+
+  .step-item {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    transition: background 0.1s;
+    display: flex;
+    gap: 10px;
+  }
+  .step-item:hover { background: var(--surface2); }
+  .step-item.active { background: var(--surface2); border-left: 2px solid var(--accent); }
+
+  .step-num {
+    font-family: 'VT323', monospace;
+    font-size: 20px;
+    color: var(--text3);
+    width: 22px;
+    flex-shrink: 0;
+    line-height: 1;
+    padding-top: 2px;
+  }
+  .step-item.active .step-num { color: var(--accent); }
+  .step-body {}
+  .step-label {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text);
+    margin-bottom: 4px;
+  }
+  .step-desc {
+    font-size: 11px;
+    color: var(--text2);
+    line-height: 1.5;
+  }
+  .step-layers {
+    margin-top: 5px;
+    display: flex;
+    gap: 4px;
+  }
+  .step-layer-tag {
+    font-size: 10px;
+    padding: 1px 5px;
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    border-radius: 2px;
+    color: var(--sky);
+  }
+
+  /* ── PANEL: INFO ── */
+  #info-panel {
+    padding: 14px;
+    overflow-y: auto;
+    flex: 1;
+  }
+  .info-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 7px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 12px;
+  }
+  .info-row span:first-child { color: var(--text2); }
+  .info-row span:last-child { color: var(--text); }
+  #farm-desc {
+    margin-top: 14px;
+    font-size: 11px;
+    color: var(--text2);
+    line-height: 1.6;
+    border: 1px solid var(--border);
+    padding: 10px;
+    border-radius: 2px;
+    background: var(--surface2);
+  }
+
+  /* ── TOOLTIP ── */
+  #tooltip {
+    position: absolute;
+    pointer-events: none;
+    background: rgba(14,14,14,0.95);
+    border: 1px solid var(--border2);
+    padding: 6px 10px;
+    font-size: 11px;
+    color: var(--text);
+    border-radius: 2px;
+    display: none;
+    z-index: 10;
+    white-space: nowrap;
+  }
+</style>
+</head>
+<body>
+
+<div id="app">
+  <header id="header">
+    <h1>⛏ MC Farm Viewer</h1>
+    <div id="farm-name" style="color:var(--text2); font-size:12px;"></div>
+    <div id="farm-meta">
+      <span class="badge" id="badge-edition"></span>
+      <span class="badge" id="badge-version"></span>
+      <span class="badge green" id="badge-diff"></span>
+    </div>
+  </header>
+
+  <div id="canvas-wrap">
+    <canvas id="three-canvas"></canvas>
+
+    <div id="controls-bar">
+      <label>Layer</label>
+      <input type="range" id="layer-slider" min="0" max="4" value="4" step="1">
+      <span id="layer-label">Tutti</span>
+      <div style="width:1px;height:16px;background:var(--border2)"></div>
+      <button class="ctrl-btn" id="btn-wireframe">Wireframe</button>
+      <button class="ctrl-btn" id="btn-reset-cam">Reset cam</button>
+    </div>
+
+    <div id="tooltip"></div>
+  </div>
+
+  <aside id="sidebar">
+    <div id="tabs">
+      <div class="tab active" data-tab="materials">Materiali</div>
+      <div class="tab" data-tab="steps">Guida</div>
+      <div class="tab" data-tab="info">Info</div>
+    </div>
+
+    <!-- MATERIALI -->
+    <div class="panel active" id="panel-materials">
+      <div id="mat-header">
+        <span id="progress-text">0 / 0</span>
+        <div id="progress-bar-wrap"><div id="progress-bar"></div></div>
+      </div>
+      <div id="mat-list"></div>
+      <button id="mat-reset">↺ Reset checklist</button>
+    </div>
+
+    <!-- STEPS -->
+    <div class="panel" id="panel-steps">
+      <div id="steps-list"></div>
+    </div>
+
+    <!-- INFO -->
+    <div class="panel" id="panel-info">
+      <div id="info-panel"></div>
+    </div>
+  </aside>
+</div>
+
+<!-- Three.js da CDN -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+// ── OrbitControls inline (r128 compatible) ──────────────────────────────────
+// (versione minimale per rotate/zoom/pan)
+THREE.OrbitControls = function(camera, domElement) {
+  this.camera = camera;
+  this.domElement = domElement;
+  this.target = new THREE.Vector3();
+  this.enableDamping = true;
+  this.dampingFactor = 0.08;
+  this.minDistance = 2;
+  this.maxDistance = 80;
+
+  let _spherical = new THREE.Spherical();
+  let _sphericalDelta = new THREE.Spherical();
+  let _scale = 1;
+  let _panOffset = new THREE.Vector3();
+  let _isMouseDown = false;
+  let _isRightDown = false;
+  let _lastMouse = { x: 0, y: 0 };
+  let _rotateSpeed = 0.005;
+  let _panSpeed = 0.01;
+
+  const _v = new THREE.Vector3();
+  const _offset = new THREE.Vector3();
+  const _quat = new THREE.Quaternion().setFromUnitVectors(camera.up, new THREE.Vector3(0,1,0));
+  const _quatInverse = _quat.clone().invert();
+
+  this.update = function() {
+    _offset.copy(camera.position).sub(this.target);
+    _offset.applyQuaternion(_quat);
+    _spherical.setFromVector3(_offset);
+    _spherical.theta += _sphericalDelta.theta;
+    _spherical.phi   += _sphericalDelta.phi;
+    _spherical.phi = Math.max(0.05, Math.min(Math.PI - 0.05, _spherical.phi));
+    _spherical.radius *= _scale;
+    _spherical.radius = Math.max(this.minDistance, Math.min(this.maxDistance, _spherical.radius));
+    this.target.add(_panOffset);
+    _offset.setFromSpherical(_spherical);
+    _offset.applyQuaternion(_quatInverse);
+    camera.position.copy(this.target).add(_offset);
+    camera.lookAt(this.target);
+    if (this.enableDamping) {
+      _sphericalDelta.theta *= (1 - this.dampingFactor);
+      _sphericalDelta.phi   *= (1 - this.dampingFactor);
+      _panOffset.multiplyScalar(1 - this.dampingFactor);
+    } else {
+      _sphericalDelta.set(0, 0, 0);
+      _panOffset.set(0, 0, 0);
+    }
+    _scale = 1;
+  };
+
+  this.reset = function(cx, cy, cz, tx, ty, tz) {
+    camera.position.set(cx, cy, cz);
+    this.target.set(tx, ty, tz);
+    _sphericalDelta.set(0,0,0);
+    _panOffset.set(0,0,0);
+    _scale = 1;
+  };
+
+  domElement.addEventListener('mousedown', e => {
+    if (e.button === 0) _isMouseDown = true;
+    if (e.button === 2) _isRightDown = true;
+    _lastMouse = { x: e.clientX, y: e.clientY };
+  });
+  window.addEventListener('mouseup', () => { _isMouseDown = false; _isRightDown = false; });
+  window.addEventListener('mousemove', e => {
+    const dx = e.clientX - _lastMouse.x;
+    const dy = e.clientY - _lastMouse.y;
+    if (_isMouseDown && !_isRightDown) {
+      _sphericalDelta.theta -= dx * _rotateSpeed * 2;
+      _sphericalDelta.phi   -= dy * _rotateSpeed * 2;
+    }
+    if (_isRightDown) {
+      const dist = _spherical.radius;
+      const fovFactor = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * 2;
+      const panX = -dx * _panSpeed * dist * fovFactor / domElement.clientHeight;
+      const panY =  dy * _panSpeed * dist * fovFactor / domElement.clientHeight;
+      const right = _v.set(camera.matrix.elements[0], camera.matrix.elements[1], camera.matrix.elements[2]).normalize();
+      const up    = new THREE.Vector3(camera.matrix.elements[4], camera.matrix.elements[5], camera.matrix.elements[6]).normalize();
+      _panOffset.addScaledVector(right, panX).addScaledVector(up, panY);
+    }
+    _lastMouse = { x: e.clientX, y: e.clientY };
+  });
+  domElement.addEventListener('wheel', e => {
+    _scale *= (e.deltaY > 0) ? 1.1 : 0.9;
+    e.preventDefault();
+  }, { passive: false });
+  domElement.addEventListener('contextmenu', e => e.preventDefault());
+};
+</script>
+
+<!-- Farm data -->
+<script src="farms/sugarcane.js"></script>
+
+<script>
+// ── CONFIG ─────────────────────────────────────────────────────────────────
+const BLOCK_SIZE = 1;
+const TEXTURE_BASE = "https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.21.1/assets/minecraft/textures/block/";
+
+// Mappa block_id → file texture (nome file senza .png)
+const TEXTURE_MAP = {
+  dirt:            "dirt",
+  grass_block:     "grass_block_top",
+  water:           "water_still",
+  sugar_cane:      "sugar_cane",
+  observer:        "observer_front",
+  piston:          "piston_top_normal",
+  redstone:        "redstone_dust_dot",
+  glass:           "glass",
+  chest:           "oak_planks",   // approssimazione: chest non ha texture flat semplice
+  hopper:          "hopper_top",
+  stone:           "stone",
+  powered_rail:    "rail_golden",
+  rail:            "rail_flat",
+  lever:           "lever",
+  redstone_torch:  "redstone_torch",
+};
+
+// Colori di fallback se texture non carica
+const FALLBACK_COLORS = {
+  dirt:           0x8B5E3C,
+  grass_block:    0x5D9E3B,
+  water:          0x3D6EBD,
+  sugar_cane:     0x4CAF50,
+  observer:       0x888888,
+  piston:         0xA0845C,
+  redstone:       0xCC2200,
+  glass:          0xADD8E6,
+  chest:          0x8B6914,
+  hopper:         0x555555,
+  stone:          0x808080,
+  powered_rail:   0xD4A017,
+  rail:           0x888888,
+  lever:          0x6B4226,
+  redstone_torch: 0xFF3300,
+};
+
+// ── THREE.JS SETUP ─────────────────────────────────────────────────────────
+const canvas = document.getElementById('three-canvas');
+const wrap   = document.getElementById('canvas-wrap');
+
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
+renderer.setPixelRatio(window.devicePixelRatio);
+renderer.setClearColor(0x111111);
+renderer.shadowMap.enabled = false;
+
+const scene  = new THREE.Scene();
+scene.fog = new THREE.Fog(0x111111, 40, 90);
+
+const camera = new THREE.PerspectiveCamera(55, 1, 0.1, 200);
+const controls = new THREE.OrbitControls(camera, canvas);
+
+// Luci
+const ambient = new THREE.AmbientLight(0xffffff, 0.7);
+scene.add(ambient);
+const dir = new THREE.DirectionalLight(0xffffff, 0.8);
+dir.position.set(10, 20, 10);
+scene.add(dir);
+
+// ── TEXTURE LOADER ─────────────────────────────────────────────────────────
+const loader = new THREE.TextureLoader();
+const textureCache = {};
+
+function loadTexture(blockId) {
+  if (textureCache[blockId]) return textureCache[blockId];
+  const file = TEXTURE_MAP[blockId] || blockId;
+  const url  = TEXTURE_BASE + file + ".png";
+  const tex  = loader.load(url, () => {}, undefined, () => {});
+  tex.magFilter = THREE.NearestFilter;
+  tex.minFilter = THREE.NearestFilter;
+  textureCache[blockId] = tex;
+  return tex;
+}
+
+// ── BLOCCHI ────────────────────────────────────────────────────────────────
+const blockGroup = new THREE.Group();
+scene.add(blockGroup);
+
+const blockMeshes = []; // { mesh, layer, blockId }
+const geomCache   = {};
+const matCache    = {};
+
+function getBlockGeom(blockId) {
+  if (!geomCache[blockId]) {
+    geomCache[blockId] = new THREE.BoxGeometry(BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE);
+  }
+  return geomCache[blockId];
+}
+
+function getBlockMat(blockId) {
+  if (!matCache[blockId]) {
+    const tex   = loadTexture(blockId);
+    const color = FALLBACK_COLORS[blockId] ?? 0xaaaaaa;
+    matCache[blockId] = new THREE.MeshLambertMaterial({
+      map: tex,
+      color: 0xffffff,
+    });
+    // se texture non carica usa fallback color
+    tex.addEventListener && tex.addEventListener('error', () => {
+      matCache[blockId].map = null;
+      matCache[blockId].color.setHex(color);
+      matCache[blockId].needsUpdate = true;
+    });
+  }
+  return matCache[blockId];
+}
+
+// Griglia di bordo (floor grid)
+function buildGrid(sizeX, sizeZ) {
+  const grid = new THREE.GridHelper(Math.max(sizeX, sizeZ) + 4, Math.max(sizeX, sizeZ) + 4, 0x2a2a2a, 0x222222);
+  grid.position.set(sizeX / 2 - 0.5, -0.51, sizeZ / 2 - 0.5);
+  scene.add(grid);
+}
+
+function buildScene(maxLayer) {
+  // Rimuovi vecchi blocchi
+  while (blockGroup.children.length) {
+    const m = blockGroup.children[0];
+    blockGroup.remove(m);
+  }
+  blockMeshes.length = 0;
+
+  const farm = FARM_DATA;
+  const layerCount = farm.layers.length;
+  const showUpTo   = (maxLayer === undefined || maxLayer >= layerCount - 1) ? layerCount - 1 : maxLayer;
+
+  farm.layers.forEach((layer2d, ly) => {
+    if (ly > showUpTo) return;
+    layer2d.forEach((row, rz) => {
+      row.forEach((blockId, rx) => {
+        if (!blockId) return;
+
+        // Blocchi vetro: trasparenza
+        const isGlass = blockId === 'glass';
+        const isWater = blockId === 'water';
+
+        const geom = getBlockGeom(blockId);
+        let mat;
+        if (isGlass) {
+          const key = blockId + '_glass';
+          if (!matCache[key]) {
+            matCache[key] = new THREE.MeshLambertMaterial({
+              map: loadTexture(blockId),
+              color: 0xffffff,
+              transparent: true,
+              opacity: 0.35,
+              side: THREE.DoubleSide,
+              depthWrite: false,
+            });
+          }
+          mat = matCache[key];
+        } else if (isWater) {
+          const key = blockId + '_water';
+          if (!matCache[key]) {
+            matCache[key] = new THREE.MeshLambertMaterial({
+              color: FALLBACK_COLORS.water,
+              transparent: true,
+              opacity: 0.6,
+            });
+          }
+          mat = matCache[key];
+        } else {
+          mat = getBlockMat(blockId);
+        }
+
+        const mesh = new THREE.Mesh(geom, mat);
+        mesh.position.set(rx, ly, rz);
+        mesh.userData = { blockId, layer: ly, x: rx, y: ly, z: rz };
+        blockGroup.add(mesh);
+        blockMeshes.push(mesh);
+      });
+    });
+  });
+}
+
+// ── CAMERA INIZIALE ────────────────────────────────────────────────────────
+function resetCamera() {
+  const farm = FARM_DATA;
+  const cx   = farm.size.x / 2;
+  const cz   = farm.size.z / 2;
+  controls.reset(cx + 12, 10, cz + 12, cx, 2, cz);
+}
+
+// ── LAYER SLIDER ───────────────────────────────────────────────────────────
+const slider     = document.getElementById('layer-slider');
+const layerLabel = document.getElementById('layer-label');
+
+function updateLayerLabel(val) {
+  const max = FARM_DATA.layers.length - 1;
+  layerLabel.textContent = (parseInt(val) >= max) ? 'Tutti' : 'Layer ' + val;
+}
+
+slider.addEventListener('input', e => {
+  updateLayerLabel(e.target.value);
+  buildScene(parseInt(e.target.value));
+});
+
+// ── WIREFRAME ──────────────────────────────────────────────────────────────
+let wireframeOn = false;
+document.getElementById('btn-wireframe').addEventListener('click', function() {
+  wireframeOn = !wireframeOn;
+  this.classList.toggle('active', wireframeOn);
+  blockGroup.children.forEach(m => {
+    if (m.material) {
+      m.material.wireframe = wireframeOn;
+    }
+  });
+});
+
+document.getElementById('btn-reset-cam').addEventListener('click', resetCamera);
+
+// ── TOOLTIP / HOVER ────────────────────────────────────────────────────────
+const raycaster = new THREE.Raycaster();
+const mouse     = new THREE.Vector2();
+const tooltip   = document.getElementById('tooltip');
+
+canvas.addEventListener('mousemove', e => {
+  const rect = canvas.getBoundingClientRect();
+  mouse.x =  ((e.clientX - rect.left) / rect.width)  * 2 - 1;
+  mouse.y = -((e.clientY - rect.top)  / rect.height) * 2 + 1;
+
+  raycaster.setFromCamera(mouse, camera);
+  const hits = raycaster.intersectObjects(blockGroup.children);
+
+  if (hits.length > 0) {
+    const d = hits[0].object.userData;
+    const mat = FARM_DATA.materials.find(m => m.id === d.blockId);
+    const name = mat ? mat.name : d.blockId;
+    tooltip.textContent = `${name}  (${d.x}, ${d.y}, ${d.z})`;
+    tooltip.style.display = 'block';
+    tooltip.style.left = (e.clientX - rect.left + 14) + 'px';
+    tooltip.style.top  = (e.clientY - rect.top  - 8)  + 'px';
+  } else {
+    tooltip.style.display = 'none';
+  }
+});
+canvas.addEventListener('mouseleave', () => { tooltip.style.display = 'none'; });
+
+// ── TABS ───────────────────────────────────────────────────────────────────
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('panel-' + tab.dataset.tab).classList.add('active');
+  });
+});
+
+// ── MATERIALI ──────────────────────────────────────────────────────────────
+const CHECKED_KEY = 'mc_farm_checked_' + (FARM_DATA.name.replace(/\s+/g,'_'));
+let checked = JSON.parse(localStorage.getItem(CHECKED_KEY) || '[]');
+
+function stacksStr(qty) {
+  const stacks = Math.floor(qty / 64);
+  const rem    = qty % 64;
+  if (stacks === 0) return qty + '';
+  if (rem === 0)    return stacks + ' stack';
+  return stacks + ' stack + ' + rem;
+}
+
+function renderMaterials() {
+  const list = document.getElementById('mat-list');
+  list.innerHTML = '';
+  FARM_DATA.materials.forEach(mat => {
+    const isChecked = checked.includes(mat.id);
+    const item = document.createElement('div');
+    item.className = 'mat-item' + (isChecked ? ' checked' : '');
+    item.dataset.id = mat.id;
+
+    const iconUrl = `https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.21.1/assets/minecraft/textures/block/${TEXTURE_MAP[mat.id] || mat.id}.png`;
+
+    item.innerHTML = `
+      <img class="mat-icon" src="${iconUrl}" alt="${mat.name}" onerror="this.style.opacity='0.2'">
+      <div class="mat-name">
+        ${mat.name}
+        <small>${stacksStr(mat.qty)} (${mat.qty} blocchi)</small>
+      </div>
+      <div class="mat-qty">${mat.qty}</div>
+      <div class="mat-check"></div>
+    `;
+    item.addEventListener('click', () => toggleMat(mat.id));
+    list.appendChild(item);
+  });
+  updateProgress();
+}
+
+function toggleMat(id) {
+  if (checked.includes(id)) {
+    checked = checked.filter(c => c !== id);
+  } else {
+    checked.push(id);
+  }
+  localStorage.setItem(CHECKED_KEY, JSON.stringify(checked));
+  renderMaterials();
+}
+
+function updateProgress() {
+  const total = FARM_DATA.materials.length;
+  const done  = checked.length;
+  document.getElementById('progress-text').textContent = done + ' / ' + total;
+  document.getElementById('progress-bar').style.width  = (done / total * 100) + '%';
+}
+
+document.getElementById('mat-reset').addEventListener('click', () => {
+  checked = [];
+  localStorage.removeItem(CHECKED_KEY);
+  renderMaterials();
+});
+
+// ── STEPS ──────────────────────────────────────────────────────────────────
+function renderSteps() {
+  const list = document.getElementById('steps-list');
+  list.innerHTML = '';
+  FARM_DATA.steps.forEach((step, i) => {
+    const item = document.createElement('div');
+    item.className = 'step-item';
+    item.dataset.idx = i;
+
+    const layerTags = step.layers.map(l =>
+      `<span class="step-layer-tag">Layer ${l}</span>`
+    ).join('');
+
+    item.innerHTML = `
+      <div class="step-num">${i + 1}</div>
+      <div class="step-body">
+        <div class="step-label">${step.label}</div>
+        <div class="step-desc">${step.description}</div>
+        <div class="step-layers">${layerTags}</div>
+      </div>
+    `;
+
+    item.addEventListener('click', () => {
+      document.querySelectorAll('.step-item').forEach(s => s.classList.remove('active'));
+      item.classList.add('active');
+      // Mostra il layer più alto dello step
+      const maxL = Math.max(...step.layers);
+      slider.value = maxL;
+      updateLayerLabel(maxL);
+      buildScene(maxL);
+    });
+
+    list.appendChild(item);
+  });
+}
+
+// ── INFO ───────────────────────────────────────────────────────────────────
+function renderInfo() {
+  const farm = FARM_DATA;
+  const panel = document.getElementById('info-panel');
+  const totalBlocks = farm.materials.reduce((s, m) => s + m.qty, 0);
+
+  panel.innerHTML = `
+    <div class="info-row"><span>Edizione</span><span>${farm.edition}</span></div>
+    <div class="info-row"><span>Versione</span><span>${farm.version}</span></div>
+    <div class="info-row"><span>Difficoltà</span><span>${farm.difficulty}</span></div>
+    <div class="info-row"><span>Dimensioni</span><span>${farm.size.x} × ${farm.size.y} × ${farm.size.z}</span></div>
+    <div class="info-row"><span>Tipi di blocchi</span><span>${farm.materials.length}</span></div>
+    <div class="info-row"><span>Blocchi totali</span><span>${totalBlocks}</span></div>
+    <div id="farm-desc">${farm.description}</div>
+  `;
+}
+
+// ── HEADER ─────────────────────────────────────────────────────────────────
+function renderHeader() {
+  document.getElementById('farm-name').textContent   = FARM_DATA.name;
+  document.getElementById('badge-edition').textContent = FARM_DATA.edition;
+  document.getElementById('badge-version').textContent = FARM_DATA.version;
+  document.getElementById('badge-diff').textContent    = FARM_DATA.difficulty;
+}
+
+// ── RESIZE ─────────────────────────────────────────────────────────────────
+function onResize() {
+  const w = wrap.clientWidth;
+  const h = wrap.clientHeight;
+  renderer.setSize(w, h);
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+}
+window.addEventListener('resize', onResize);
+
+// ── ANIMATE ────────────────────────────────────────────────────────────────
+function animate() {
+  requestAnimationFrame(animate);
+  controls.update();
+  renderer.render(scene, camera);
+}
+
+// ── INIT ───────────────────────────────────────────────────────────────────
+function init() {
+  const farm = FARM_DATA;
+  slider.max   = farm.layers.length - 1;
+  slider.value = farm.layers.length - 1;
+  updateLayerLabel(slider.value);
+
+  buildGrid(farm.size.x, farm.size.z);
+  buildScene();
+  resetCamera();
+  onResize();
+
+  renderHeader();
+  renderMaterials();
+  renderSteps();
+  renderInfo();
+
+  animate();
+}
+
+init();
+</script>
+</body>
+</html>

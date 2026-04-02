@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MC Farm Viewer — Index</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=VT323&family=IBM+Plex+Mono:wght@400;500&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0e0e0e;
+    --surface: #161616;
+    --surface2: #1e1e1e;
+    --border: #2a2a2a;
+    --border2: #3a3a3a;
+    --text: #e8e8e0;
+    --text2: #888880;
+    --text3: #444440;
+    --accent: #7ab648;
+    --accent2: #5a8832;
+    --gold: #d4a017;
+  }
+
+  html, body {
+    min-height: 100vh;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'IBM Plex Mono', monospace;
+  }
+
+  header {
+    border-bottom: 1px solid var(--border);
+    padding: 20px 40px;
+    display: flex;
+    align-items: baseline;
+    gap: 16px;
+  }
+  header h1 {
+    font-family: 'VT323', monospace;
+    font-size: 32px;
+    color: var(--accent);
+    letter-spacing: 2px;
+  }
+  header p {
+    font-size: 12px;
+    color: var(--text2);
+  }
+
+  main {
+    padding: 40px;
+    max-width: 900px;
+  }
+
+  .section-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text3);
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .section-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  .farm-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 12px;
+    margin-bottom: 40px;
+  }
+
+  .farm-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 18px;
+    cursor: pointer;
+    text-decoration: none;
+    color: inherit;
+    display: block;
+    transition: border-color 0.15s, background 0.15s;
+    position: relative;
+    overflow: hidden;
+  }
+  .farm-card::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+    background: var(--accent);
+    transform: scaleY(0);
+    transform-origin: bottom;
+    transition: transform 0.2s;
+  }
+  .farm-card:hover { border-color: var(--border2); background: var(--surface2); }
+  .farm-card:hover::before { transform: scaleY(1); }
+
+  .farm-card .icon {
+    font-size: 32px;
+    margin-bottom: 10px;
+    display: block;
+    font-family: 'VT323', monospace;
+  }
+  .farm-card h2 {
+    font-size: 14px;
+    font-weight: 500;
+    margin-bottom: 6px;
+  }
+  .farm-card p {
+    font-size: 11px;
+    color: var(--text2);
+    line-height: 1.5;
+    margin-bottom: 12px;
+  }
+  .farm-card .tags {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .tag {
+    font-size: 10px;
+    padding: 2px 7px;
+    border: 1px solid var(--border2);
+    border-radius: 2px;
+    color: var(--text2);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .tag.green { border-color: var(--accent2); color: var(--accent); }
+  .tag.gold  { border-color: #7a5a0a; color: var(--gold); }
+
+  .farm-card.wip {
+    opacity: 0.45;
+    cursor: default;
+    pointer-events: none;
+  }
+  .wip-badge {
+    position: absolute;
+    top: 10px; right: 10px;
+    font-size: 10px;
+    padding: 2px 7px;
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    color: var(--text3);
+    border-radius: 2px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>⛏ MC Farm Viewer</h1>
+  <p>Guide interattive 3D per farm di Minecraft</p>
+</header>
+
+<main>
+  <div class="section-label">Farm disponibili</div>
+
+  <div class="farm-grid">
+
+    <a class="farm-card" href="viewer.html">
+      <span class="icon">🌾</span>
+      <h2>Sugar Cane Farm Automatica</h2>
+      <p>Farm con observer e pistoni. Raccolta automatica tramite hopper. Stackabile lateralmente.</p>
+      <div class="tags">
+        <span class="tag green">Facile</span>
+        <span class="tag">Java 1.21+</span>
+        <span class="tag gold">~800/ora</span>
+      </div>
+    </a>
+
+    <div class="farm-card wip">
+      <span class="wip-badge">Presto</span>
+      <span class="icon">🪨</span>
+      <h2>Iron Farm</h2>
+      <p>Farm con golem di ferro, letti e villagers. Alta produzione di ferro in survial.</p>
+      <div class="tags">
+        <span class="tag">Media</span>
+        <span class="tag">Java 1.21+</span>
+      </div>
+    </div>
+
+    <div class="farm-card wip">
+      <span class="wip-badge">Presto</span>
+      <span class="icon">💀</span>
+      <h2>Mob Farm Generica</h2>
+      <p>Spawner a cascata per grinding di mob. Compatibile con la maggior parte dei mob ostili.</p>
+      <div class="tags">
+        <span class="tag">Media</span>
+        <span class="tag">Java 1.21+</span>
+      </div>
+    </div>
+
+    <div class="farm-card wip">
+      <span class="wip-badge">Presto</span>
+      <span class="icon">🏹</span>
+      <h2>Gold Farm (Nether)</h2>
+      <p>Farm sul tetto del nether con zombified piglin. Alta produzione di gold ingots.</p>
+      <div class="tags">
+        <span class="tag">Avanzata</span>
+        <span class="tag">Java 1.21+</span>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="section-label" style="margin-top:10px;">Come aggiungere una farm</div>
+  <p style="font-size:12px; color:var(--text2); line-height:1.7;">
+    Crea un nuovo file in <code style="background:var(--surface2);padding:1px 6px;border-radius:2px;color:var(--accent)">farms/nomefarm.js</code>
+    seguendo la struttura di <code style="background:var(--surface2);padding:1px 6px;border-radius:2px;color:var(--accent)">sugarcane.js</code>,
+    poi aggiungila alla griglia qui sopra con un link a <code style="background:var(--surface2);padding:1px 6px;border-radius:2px;color:var(--accent)">viewer.html</code>.
+  </p>
+</main>
+
+</body>
+</html>
