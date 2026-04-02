@@ -3,9 +3,20 @@
 # Farm 3D Viewer
 lo so che il nome in inglese non è corretto
 
-### Di cosa si tratta?
+## Di cosa si tratta?
 Farm 3D Viewer è una guida interattiva in 3D per costruire delle farm per Minecraft (Java Edition).
 
-# DISCLAIMER
+## Struttura File
+```
+mc-farm-viewer/
+├── index.html       ← invariato
+├── viewer.html      ← solo HTML puro
+├── style.css        ← tutto il CSS
+├── viewer.js        ← tutta la logica Three.js
+└── farms/
+    └── sugarcane.js
+```
 
+
+# DISCLAIMER
 Come già detto questo progetto è stato realizzato con l'AI ed è ancora in uno stato molto instabile e con tantissimi bug.
