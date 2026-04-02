@@ -9,10 +9,10 @@ Farm 3D Viewer è una guida interattiva in 3D per costruire delle farm per Minec
 ## Struttura File
 ```
 mc-farm-viewer/
-├── index.html       ← invariato
-├── viewer.html      ← solo HTML puro
-├── style.css        ← tutto il CSS
-├── viewer.js        ← tutta la logica Three.js
+├── index.html       
+├── viewer.html      
+├── style.css        
+├── viewer.js        ← logica Three.js
 └── farms/
     └── sugarcane.js
 ```
